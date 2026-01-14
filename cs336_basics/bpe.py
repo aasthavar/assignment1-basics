@@ -1,11 +1,17 @@
 # optimization of code inspiration from here: https://github.com/thtfive/cs336-assignment1-basics/blob/thtfive/basics/cs336_basics/train_bpe.py#L177
 
 import regex as re
-from configs import config
+from .configs import config
 import time
 from contextlib import contextmanager
 import multiprocessing as mp
-from pretokenization_example import find_chunk_boundaries
+from .pretokenization_example import find_chunk_boundaries
+from .common import (
+    write_vocab_to_file, 
+    write_merges_to_file
+)
+from tqdm import tqdm
+import json
 
 config = config["tokenizer"]
 config["PAT"] = re.compile(config["PAT"])
@@ -232,9 +238,8 @@ def train_bpe(
     # step 2: pre-tokenize
     # ------------------------------------------------------------
     with timer("pre-tokenization", profile):
-        
         num_processes = mp.cpu_count()
-        print(f"num_processes for parallelizing pretokenization: {num_processes}")
+        # print(f"num_processes for parallelizing pretokenization: {num_processes}")
         with open(input_path, "rb") as f:
             chunk_boundaries = find_chunk_boundaries(
                 file=f,
@@ -252,20 +257,29 @@ def train_bpe(
             ]
             freq_tables = pool.map(pretokenize_chunk, tasks)
             freq_table = merge_freq_tables(freq_tables)
-            # print(f"total unique words: {len(freq_table)}")
-            
-            
-        # print(f"total unique words: {len(freq_table)}")
     
     # ------------------------------------------------------------
     # step 3: compute merges
     # ------------------------------------------------------------
-    with timer("merge loop (total)", profile):
+    with timer("compute merges (total)", profile):
+        
+        with timer("compute merges: calc counts", profile):
+            # count byte-pair frequencies
+            bytes_pair_counts = get_bytes_pair_counts(freq_table) # (bytes, bytes) → count
+            # find all sequences which contain byte_pair and push it to dict
+            bytes_pair_to_tokens = build_bytes_pair_to_tokens(freq_table, bytes_pair_counts, vocab_size) # (bytes, bytes) → set[token_sequence] 
+        
+        iterator = range(vid, vocab_size)
+        if profile: # using this time slightly increased
+            iterator = tqdm(
+                iterator,
+                desc="[TIMER] compute merges: bpe merge",
+                total=vocab_size - vid,
+                unit="merge",
+            )
         merges: list[tuple(bytes, bytes)] = []
-        # count byte-pair frequencies
-        bytes_pair_counts = get_bytes_pair_counts(freq_table) # (bytes, bytes) → count
-        bytes_pair_to_tokens = build_bytes_pair_to_tokens(freq_table, bytes_pair_counts, vocab_size) # (bytes, bytes) → set[token_sequence] 
-        while vid < vocab_size: # merge until we reach vocab_size
+        
+        for _ in iterator: # while vid < vocab_size: # merge until we reach vocab_size
             if not bytes_pair_counts: # no merge byte pairs to merge
                 break
             # find the pair with max count
@@ -277,11 +291,16 @@ def train_bpe(
             merges.append(pair)
             vocab[vid] = pair[0]+pair[1]
             vid += 1
+    
     return vocab, merges
 
         
 if __name__ == "__main__":
-    print(f"training on data from: {config["input_path"].split("/")[-1]}")
+    filename_with_ext = config["input_path"].split("/")[-1]
+    print(f"config: {json.dumps(config, indent=2, default=str)}")
+    print(f"training on data: {filename_with_ext}")
+    
+    print("\n-------- start --------")
     vocab, merges = train_bpe(
         input_path=config["input_path"],
         vocab_size=config["vocab_size"],
@@ -289,6 +308,18 @@ if __name__ == "__main__":
         split_special_token="<|endoftext|>",
         profile=True
     )
+    print("\n-------- artifacts --------")
+    filename = filename_with_ext.split(".")[0]
+    
+    vocab_file_path = f"{config['save_path']}/{filename}_vocab.txt"
+    print(f"vocab file saved as: {vocab_file_path}")
+    write_vocab_to_file(vocab, vocab_file_path)
+    
+    merges_file_path = f"{config['save_path']}/{filename}_merges.txt"
+    print(f"merges file saved as: {merges_file_path}")
+    write_merges_to_file(merges, merges_file_path)
+
+    
     # NOTE; missed noting the baseline numbers - it was >> 15s for merge loop
     
     # after optimizing merge loop step
@@ -301,6 +332,6 @@ if __name__ == "__main__":
     # training on data from: TinyStoriesV2-GPT4-valid.txt
     # [TIMER] init vocab: 0.0000s
     # num_processes for parallelizing pretokenization: 10
-    # [TIMER] pre-tokenization: 1.4813s
+    # [TIMER] pre-tokenization: 0.8908s
     # [TIMER] merge loop (total): 5.4502s
     
