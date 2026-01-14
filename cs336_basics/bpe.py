@@ -1,3 +1,5 @@
+# optimization of code inspiration from here: https://github.com/thtfive/cs336-assignment1-basics/blob/thtfive/basics/cs336_basics/train_bpe.py#L177
+
 import regex as re
 from configs import config
 import time
