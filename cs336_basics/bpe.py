@@ -2,7 +2,11 @@ import regex as re
 from configs import config
 import time
 from contextlib import contextmanager
-# from pretokenization_example import find_chunk_boundaries
+import multiprocessing as mp
+from pretokenization_example import find_chunk_boundaries
+
+config = config["tokenizer"]
+config["PAT"] = re.compile(config["PAT"])
 
 @contextmanager
 def timer(name: str, enabled: bool):
@@ -15,10 +19,6 @@ def timer(name: str, enabled: bool):
     print(f"[TIMER] {name}: {end - start:.4f}s")
 
 
-config = config["tokenizer"]
-config["PAT"] = re.compile(config["PAT"])
-
-    
 def apply_bpe_merge(
     freq_table: dict[tuple[bytes, ...], int],
     max_pair: tuple[bytes, bytes],
@@ -154,6 +154,7 @@ def build_bytes_pair_to_tokens(
         bytes_pair_to_tokens[bytes_pair] = tok_seqs_with_bytes_pair
     return bytes_pair_to_tokens
 
+
 def get_bytes_pair_counts(
     freq_table: dict[tuple[bytes], int]
 ) -> dict[tuple[bytes, bytes], int]:
@@ -165,11 +166,50 @@ def get_bytes_pair_counts(
             pair = (key[i], key[i+1])
             bytes_pair_counts[pair] = bytes_pair_counts.get(pair, 0) + value
     return bytes_pair_counts
-    
+
+
+def pretokenize_chunk(params) -> dict[tuple[bytes, ...], int]:
+    """
+    function does the following:
+    - reads a chunk of the file
+    - removes special tokens
+    - applies pre-tokenization regex
+    - converts text -> byte-level token seqences
+    - builds and returns a local frequency table
+    """
+    start, end = params["start"], params["end"]
+    freq_table: dict[tuple[bytes], int] = {} # token_sequence → count
+    with open(params["file_name"], "rb") as f:
+        f.seek(start)
+        text = f.read(end-start).decode("utf-8", errors="ignore")
+        escaped = [re.escape(token) for token in params["special_tokens"]]
+        documents = re.split("|".join(escaped), text)
+        for doc in documents:
+            words = config["PAT"].findall(doc)
+            for word in words:
+                key = tuple([bytes([x]) for x in word.encode("utf-8")])
+                freq_table[key] = freq_table.get(key, 0) + 1
+    return freq_table
+
+
+def merge_freq_tables(
+    freq_tables:list[dict[tuple[bytes, ...], int]]
+) -> dict[tuple[bytes, ...], int]:
+    """
+    merge frequencies from multiple chunks
+    """
+    merged_freq_table = {}
+    for table in freq_tables:
+        for key, count in table.items():
+            merged_freq_table[key] = merged_freq_table.get(key, 0) + count
+    return merged_freq_table
+
+
 def train_bpe(
     input_path: str, 
     vocab_size: int, 
     special_tokens: list[str],
+    split_special_token: str = "<|endoftext|>",
     profile: bool = False,
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
     # ------------------------------------------------------------
@@ -190,16 +230,29 @@ def train_bpe(
     # step 2: pre-tokenize
     # ------------------------------------------------------------
     with timer("pre-tokenization", profile):
-        freq_table: dict[tuple[bytes], int] = {} # token_sequence → count
+        
+        num_processes = mp.cpu_count()
+        print(f"num_processes for parallelizing pretokenization: {num_processes}")
         with open(input_path, "rb") as f:
-            text = f.read().decode("utf-8", errors="ignore")
-            escaped = [re.escape(token) for token in special_tokens]
-            documents = re.split("|".join(escaped), text)
-            for doc in documents:
-                words = config["PAT"].findall(doc)
-                for word in words:
-                    key = tuple([bytes([x]) for x in word.encode("utf-8")])
-                    freq_table[key] = freq_table.get(key, 0) + 1
+            chunk_boundaries = find_chunk_boundaries(
+                file=f,
+                desired_num_chunks=num_processes,
+                split_special_token=split_special_token.encode("utf-8")
+            )
+        with mp.Pool(processes=num_processes) as pool:
+            tasks = [
+                {
+                    "file_name": input_path, 
+                    "start": chunk_boundaries[i], 
+                    "end": chunk_boundaries[i+1], 
+                    "special_tokens": special_tokens
+                } for i in range(len(chunk_boundaries)-1)
+            ]
+            freq_tables = pool.map(pretokenize_chunk, tasks)
+            freq_table = merge_freq_tables(freq_tables)
+            # print(f"total unique words: {len(freq_table)}")
+            
+            
         # print(f"total unique words: {len(freq_table)}")
     
     # ------------------------------------------------------------
@@ -224,12 +277,14 @@ def train_bpe(
             vid += 1
     return vocab, merges
 
+        
 if __name__ == "__main__":
     print(f"training on data from: {config["input_path"].split("/")[-1]}")
     vocab, merges = train_bpe(
         input_path=config["input_path"],
         vocab_size=config["vocab_size"],
         special_tokens=config["special_tokens"],
+        split_special_token="<|endoftext|>",
         profile=True
     )
     # NOTE; missed noting the baseline numbers - it was >> 15s for merge loop
@@ -241,4 +296,9 @@ if __name__ == "__main__":
     # [TIMER] merge loop (total): 5.2906s
     
     # after optimizing pretokenization step
+    # training on data from: TinyStoriesV2-GPT4-valid.txt
+    # [TIMER] init vocab: 0.0000s
+    # num_processes for parallelizing pretokenization: 10
+    # [TIMER] pre-tokenization: 1.4813s
+    # [TIMER] merge loop (total): 5.4502s
     
