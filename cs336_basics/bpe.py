@@ -18,71 +18,6 @@ def timer(name: str, enabled: bool):
 config = config["tokenizer"]
 config["PAT"] = re.compile(config["PAT"])
 
-# # unoptimized version: loops over all token sequences, merge `max_pair` if present
-# def apply_bpe_merge(
-#     freq_table: dict[tuple[bytes], int],
-#     max_pair: tuple[bytes, bytes],
-# ) -> dict[tuple[bytes], int]:
-#     """
-#     return a new frequency table after merging `max_pair` everywhere it occurs.
-#     """
-#     a, b = max_pair
-#     merged = a + b
-#     new_freq_table = {}
-#     for key, value in freq_table.items():
-#         L = len(key)
-#         i=0
-#         out = []
-#         while i < L:
-#             if (i+1 < L) and (key[i] == a) and (key[i + 1] == b):
-#                 out.append(merged)
-#                 i+=2
-#             else:
-#                 out.append(key[i])
-#                 i+=1
-#         new_key = tuple(out)
-#         new_freq_table[new_key] = new_freq_table.get(new_key, 0) + value
-#     return new_freq_table
-
-
-# # optimized version v1: touch only those keys where you know the `max_pair` exists
-# def apply_bpe_merge(
-#     freq_table: dict[tuple[bytes], int],
-#     max_pair: tuple[bytes, bytes],
-#     bytes_pair_to_tokens
-# ) -> dict[tuple[bytes], int]:
-#     """
-#     return a new frequency table after merging `max_pair` everywhere it occurs.
-#     """
-#     a, b = max_pair
-#     merged = a + b
-    
-#     affected_sequences = bytes_pair_to_tokens[max_pair]
-#     if not affected_sequences:
-#         return freq_table
-
-#     new_freq_table = freq_table.copy()
-    
-#     for seq in affected_sequences:
-#         count = freq_table[seq]
-        
-#         i = 0
-#         out = []
-#         L = len(seq)
-#         while i < L:
-#             if (i+1 < L) and (seq[i] == a) and (seq[i + 1] == b):
-#                 out.append(merged)
-#                 i+=2
-#             else:
-#                 out.append(seq[i])
-#                 i+=1
-        
-#         new_freq_table.pop(seq, None)
-        
-#         new_key = tuple(out)
-#         new_freq_table[new_key] = new_freq_table.get(new_key, 0) + count
-    
-#     return new_freq_table
     
 def apply_bpe_merge(
     freq_table: dict[tuple[bytes, ...], int],
@@ -91,14 +26,37 @@ def apply_bpe_merge(
     bytes_pair_to_tokens: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]],
 ) -> None:
     """
-    Incrementally update:
-      - freq_table
-      - bytes_pair_counts
-      - bytes_pair_to_tokens
+    Apply one BPE merge step for `max_pair`.
 
-    by merging `max_pair` everywhere it occurs.
+    This function represents the *final, fully optimized* version.
     All updates are done in-place.
+
+    ──────────────────────────────────────────────────────────────
+    Optimization history (conceptual):
+
+    Version 0 (naive, O(N)):
+        - Loop over *all* token sequences
+        - Merge `max_pair` wherever it appears
+        - Rebuild a new freq_table from scratch
+
+    Version 1 (localized update):
+        - Maintain bytes_pair_to_tokens
+        - Only touch token sequences known to contain `max_pair`
+        - Still returned a new freq_table
+
+    Version 2 (incremental, current):
+        - Mutate freq_table in-place
+        - Incrementally update:
+            * freq_table
+            * bytes_pair_counts
+            * bytes_pair_to_tokens
+        - No global recomputation of bytes_pair_counts, bytes_pair_to_tokens
+        - No return value
+
+    The current implementation corresponds to Version 2.
+    ──────────────────────────────────────────────────────────────
     """
+
     a, b = max_pair
     merged = a + b
 
