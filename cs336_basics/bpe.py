@@ -232,8 +232,13 @@ if __name__ == "__main__":
         special_tokens=config["special_tokens"],
         profile=True
     )
-    # print(f"merges: {merges}")
-    # print("\nvocab:")
-    # for i in range(256, len(vocab)):
-    #     print(f"{i}, {vocab[i]}")
+    # NOTE; missed noting the baseline numbers - it was >> 15s for merge loop
+    
+    # after optimizing merge loop step
+    # training on data from: TinyStoriesV2-GPT4-valid.txt
+    # [TIMER] init vocab: 0.0000s
+    # [TIMER] pre-tokenization: 4.7191s
+    # [TIMER] merge loop (total): 5.2906s
+    
+    # after optimizing pretokenization step
     
