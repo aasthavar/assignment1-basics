@@ -1,0 +1,55 @@
+def fibonacci(n):
+if n <= 1:
+return n
+return fibonacci(n - 1) + fibonacci(n - 2)
+
+<|endoftext|>
+
+import math
+
+def softmax(x):
+exp_x = [math.exp(v) for v in x]
+total = sum(exp_x)
+return [v / total for v in exp_x]
+
+<|endoftext|>
+
+class LinearModel:
+def **init**(self, w, b):
+self.w = w
+self.b = b
+
+```
+def forward(self, x):
+    return self.w * x + self.b
+```
+
+<|endoftext|>
+
+import re
+
+text = "hello   world"
+tokens = re.findall(r"\w+", text)
+print(tokens)
+
+<|endoftext|>
+
+def merge(indices, pair, new_index):
+out = []
+i = 0
+while i < len(indices):
+if i + 1 < len(indices) and (indices[i], indices[i + 1]) == pair:
+out.append(new_index)
+i += 2
+else:
+out.append(indices[i])
+i += 1
+return out
+
+<|endoftext|>
+
+with open("data.txt", "rb") as f:
+f.seek(0, 2)
+size = f.tell()
+f.seek(0)
+print(f"File size: {size} bytes")

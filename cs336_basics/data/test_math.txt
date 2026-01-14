@@ -1,0 +1,51 @@
+Let $f(x) = x^2 + 3x + 2$. Solving $f(x)=0$, we obtain
+$(x+1)(x+2)=0$, hence the roots are $x=-1$ and $x=-2$.
+
+<|endoftext|>
+
+For a matrix $A \in \mathbb{R}^{n \times n}$, the spectral theorem states that
+$A = Q \Lambda Q^\top$, where $Q$ is orthogonal and
+$\Lambda = \mathrm{diag}(\lambda_1, \dots, \lambda_n)$ contains the eigenvalues.
+
+<|endoftext|>
+
+If $X \sim \mathcal{N}(\mu, \sigma^2)$, then its probability density function is
+$p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}
+\exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)$.
+
+<|endoftext|>
+
+Consider the infinite series $\sum_{k=1}^{\infty} \frac{1}{k^2}$.
+Using Fourier analysis, one can show that the sum equals $\frac{\pi^2}{6}$.
+
+<|endoftext|>
+
+Let $G=(V,E)$ be a graph with adjacency matrix $A$.
+The number of walks of length two from node $i$ to node $j$ is given by $(A^2)_{ij}$.
+
+<|endoftext|>
+
+If $\nabla f(x^*) = 0$ and the Hessian $\nabla^2 f(x^*) \succ 0$,
+then $x^*$ is a strict local minimum.
+
+<|endoftext|>
+
+For vectors $x,y \in \mathbb{R}^n$, the Cauchy–Schwarz inequality states that
+$|\langle x,y \rangle| \le |x||y|$.
+
+<|endoftext|>
+
+In optimization, gradient descent updates parameters via
+$\theta_{t+1} = \theta_t - \eta \nabla_\theta L(\theta_t)$,
+where $\eta > 0$ is the learning rate.
+
+<|endoftext|>
+
+The cross-entropy loss for a classification model is
+$L = -\sum_{i} y_i \log p_i$,
+where $y_i$ are target labels and $p_i$ are predicted probabilities.
+
+<|endoftext|>
+
+Let $\forall x \in \mathbb{R}$, if $f'(x) > 0$, then $f$ is strictly increasing.
+If $f''(x) < 0$, the function is concave.

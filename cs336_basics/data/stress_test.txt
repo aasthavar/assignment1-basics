@@ -1,0 +1,58 @@
+Once upon a time 😊 there was a happy farm 🚜🌾 with cows 🐄🐄 and chickens 🐔.
+Everyone said “hello!” 👋😄
+
+<|endoftext|>
+
+Emojis next to text🙂without spaces🙃can be tricky🤔for tokenizers⚠️.
+What about punctuation?!😂😂😂
+
+<|endoftext|>
+
+Skin tone modifiers matter 👍 👍🏽 👍🏾 👍🏿
+These should not be split incorrectly.
+
+<|endoftext|>
+
+Family emojis use zero-width joiners 👨‍👩‍👧‍👦 👩‍❤️‍💋‍👩 👨‍👨‍👦
+Breaking these is a common bug 🐛.
+
+<|endoftext|>
+
+Flags are compound emojis 🇮🇳 🇺🇸 🇫🇷 🇯🇵
+Each flag is actually two code points.
+
+<|endoftext|>
+
+Math meets emoji ➕➖✖️➗ = 😵‍💫
+Consider ∀x ∈ ℝ, x² ≥ 0 ✅
+
+<|endoftext|>
+
+Code with emojis in comments:
+def add(a, b):  # ➕ simple addition
+return a + b  # ✅ works
+
+<|endoftext|>
+
+Special token stress test:
+hello<|endoftext|>world🙂<|endoftext|>again🔥
+
+<|endoftext|>
+
+Whitespace + emoji test:
+hello␣␣␣world😴
+hello\tworld😎
+hello\nworld🌍
+
+<|endoftext|>
+
+Repetition stress:
+😂😂😂😂😂😂😂😂😂😂
+lol🤣lol🤣lol🤣lol🤣
+
+<|endoftext|>
+
+Mixed languages + emoji:
+नमस्ते 🙏 world 🌎
+中文测试 🚀 test ✨
+مرحبا 🌙 hello ☀️
