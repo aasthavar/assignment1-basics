@@ -296,6 +296,7 @@ def train_bpe(
 
         
 if __name__ == "__main__":
+    # NOTE: For train_bpe_tinystories, train_bpe_expts_owt: just change the configs.py
     filename_with_ext = config["input_path"].split("/")[-1]
     print(f"config: {json.dumps(config, indent=2, default=str)}")
     print(f"training on data: {filename_with_ext}")

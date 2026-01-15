@@ -66,6 +66,22 @@ Ans:
 ### Problem (train_bpe_expts_owt)
 (a) Train a byte-level BPE tokenizer on the OpenWebText dataset, using a maximum vocabulary size of 32,000. Serialize the resulting vocabulary and merges to disk for further inspection. What is the longest token in the vocabulary? Does it make sense?
 Ans: 
-- For the valid dataset: longest token is: "----------------------------------------------------------------". Nope it doesn't make sense
+- For the valid dataset: longest token is: "----------------------------------------------------------------". Nope it doesn't make sense. 
+- 
+
+(b) Compare and contrast the tokenizer that you get training on TinyStories versus OpenWebText.
+- Thoughts:
+  - TinyStories -> clean, curated prose -> long words dominate
+  - OpenWebText -> raw web text -> formatting artifacts dominate
+- Takeway: BPE optimizes for frequency, not semantics. BPE tokenizers mirror the statistics of their training data—clean data yields semantic tokens, noisy data yields structural artifacts.
 
 
+### Problem
+
+
+
+### Problem
+
+
+
+### Problem
