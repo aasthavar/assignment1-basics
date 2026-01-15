@@ -39,3 +39,33 @@ Ans: {I don't know}
 
 
 ### Problem (train_bpe)
+Find code in bpe.py
+
+
+### Problem (train_bpe_tinystories)
+(a) Train a byte-level BPE tokenizer on the TinyStories dataset, using a maximum vocabulary size
+of 10,000. Make sure to add the TinyStories <|endoftext|> special token to the vocabulary.
+Serialize the resulting vocabulary and merges to disk for further inspection. How many hours
+and memory did training take? What is the longest token in the vocabulary? Does it make sense?
+Ans: 
+- time took to train:  78.9581s + 81.2624s = 2.7 mins. Note: the time is slightly higher than 2 mins because of the tqdm stuff. without it its under 2 mins.
+- didn't capture the memory.
+- longest token in vocab: "Ġaccomplishment" which means " accomplishment". Ġ is a marker for a leading space.
+
+(b) Profile your code. What part of the tokenizer training process takes the most time?
+Ans: 
+- profile:
+    [TIMER] init vocab: 0.0000s
+    [TIMER] pre-tokenization: 78.9581s
+    [TIMER] compute merges: calc counts: 50.0580s
+    [TIMER] compute merges: bpe merge: 100%|█████████████████████████████████████████████████████████████████████████████| 9743/9743 [00:31<00:00, 312.30merge/s]
+    [TIMER] compute merges (total): 81.2624s
+- In this case pre-tokenization took slightly more time.
+
+
+### Problem (train_bpe_expts_owt)
+(a) Train a byte-level BPE tokenizer on the OpenWebText dataset, using a maximum vocabulary size of 32,000. Serialize the resulting vocabulary and merges to disk for further inspection. What is the longest token in the vocabulary? Does it make sense?
+Ans: 
+- For the valid dataset: longest token is: "----------------------------------------------------------------". Nope it doesn't make sense
+
+

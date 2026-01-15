@@ -24,29 +24,40 @@
 
 
 # ---------------------------- #
-import regex as re
+# import regex as re
 
-PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+# PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
-print(re.findall(PAT, "some text that i'll pre-tokenize"))
-# ['some', ' text', ' that', ' i', "'ll", ' pre', '-', 'tokenize']
+# print(re.findall(PAT, "some text that i'll pre-tokenize"))
+# # ['some', ' text', ' that', ' i', "'ll", ' pre', '-', 'tokenize']
 
-print(re.findall(PAT, "life is full of surprises! i've many dreams!"))
-# ['life', ' is', ' full', ' of', ' surprises', '!', ' i', "'ve", ' many', ' dreams', '!']
+# print(re.findall(PAT, "life is full of surprises! i've many dreams!"))
+# # ['life', ' is', ' full', ' of', ' surprises', '!', ' i', "'ve", ' many', ' dreams', '!']
 
-obj = re.finditer(PAT, "life is full of surprises! i've many dreams!")
-matches = []
-for match in obj:
-    matches.append(match.group())
-    # print(match.group(), match.start(), match.end())
-print(matches)
-# ['life', ' is', ' full', ' of', ' surprises', '!', ' i', "'ve", ' many', ' dreams', '!']
+# obj = re.finditer(PAT, "life is full of surprises! i've many dreams!")
+# matches = []
+# for match in obj:
+#     matches.append(match.group())
+#     # print(match.group(), match.start(), match.end())
+# print(matches)
+# # ['life', ' is', ' full', ' of', ' surprises', '!', ' i', "'ve", ' many', ' dreams', '!']
 
 
 
 # ---------------------------- #
+# with open("cs336_basics/data/TinyStoriesV2-GPT4-train_vocab.txt") as f:
+with open("cs336_basics/data/owt_valid_vocab.txt") as f:
+    text = f.read()
+    lines = text.split("\n")
+    tokens = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        token = line.split(" ")[1]
+        tokens.append(token)
 
-
+    print(max(tokens, key=lambda item: len(item)))
 
 # ---------------------------- #
 

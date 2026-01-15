@@ -322,16 +322,31 @@ if __name__ == "__main__":
     
     # NOTE; missed noting the baseline numbers - it was >> 15s for merge loop
     
-    # after optimizing merge loop step
-    # training on data from: TinyStoriesV2-GPT4-valid.txt
+    # NOTE: after optimizing merge loop step
+    # training on data: TinyStoriesV2-GPT4-valid.txt
     # [TIMER] init vocab: 0.0000s
     # [TIMER] pre-tokenization: 4.7191s
     # [TIMER] merge loop (total): 5.2906s
     
-    # after optimizing pretokenization step
+    # NOTE: after optimizing pretokenization step
     # training on data from: TinyStoriesV2-GPT4-valid.txt
     # [TIMER] init vocab: 0.0000s
     # num_processes for parallelizing pretokenization: 10
     # [TIMER] pre-tokenization: 0.8908s
     # [TIMER] merge loop (total): 5.4502s
     
+    
+    # training on data: TinyStoriesV2-GPT4-train.txt
+    # [TIMER] init vocab: 0.0000s
+    # [TIMER] pre-tokenization: 78.9581s
+    # [TIMER] compute merges: calc counts: 50.0580s
+    # [TIMER] compute merges: bpe merge: 100%|█████████████████████████████████████████████████████████████████████████████| 9743/9743 [00:31<00:00, 312.30merge/s]
+    # [TIMER] compute merges (total): 81.2624s
+    
+    
+    # training on data: owt_valid.txt
+    # [TIMER] init vocab: 0.0000s
+    # [TIMER] pre-tokenization: 7.9842s
+    # [TIMER] compute merges: calc counts: 2798.4712s
+    # [TIMER] compute merges: bpe merge: 100%|████████████████████████████████████████████████████████████████████████████| 31743/31743 [17:16<00:00, 30.62merge/s]
+    # [TIMER] compute merges (total): 3835.1516s

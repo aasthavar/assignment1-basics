@@ -10,14 +10,14 @@ config = {
         # "vocab_size": 256+100,
         
         # scenario: run for tiny-stories dataset
-        "input_path": "cs336_basics/data/TinyStoriesV2-GPT4-valid.txt",
+        # "input_path": "cs336_basics/data/TinyStoriesV2-GPT4-valid.txt",
         # "input_path": "cs336_basics/data/TinyStoriesV2-GPT4-train.txt",
-        "vocab_size": 10000,
+        # "vocab_size": 10000,
         
         # scenario: run for open-web-text dataset
         # "input_path": "cs336_basics/data/owt_valid.txt",
-        # "input_path": "cs336_basics/data/owt_train.txt",
-        # "vocab_size": 32000,
+        "input_path": "cs336_basics/data/owt_train.txt",
+        "vocab_size": 32000,
         
     }
 }
