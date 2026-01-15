@@ -76,12 +76,22 @@ Ans:
 - Takeway: BPE optimizes for frequency, not semantics. BPE tokenizers mirror the statistics of their training data—clean data yields semantic tokens, noisy data yields structural artifacts.
 
 
-### Problem
+### Problem (tokenizer)
+See code in tokenizer.py
 
 
+### Problem (tokenizer_experiments)
+(a) Sample 10 documents from TinyStories and OpenWebText. Using your previously-trained TinyStories and OpenWebText tokenizers (10K and 32K vocabulary size, respectively), encode these sampled documents into integer IDs. What is each tokenizer’s compression ratio (bytes/token)?
+Ans: 
+- TinyStories tokenizer average compression: 4.11 bytes/token.
+- didn't check for owt
 
-### Problem
 
+(b) What happens if you tokenize your OpenWebText sample with the TinyStories tokenizer? Compare the compression ratio and/or qualitatively describe what happens.
+Ans: Compression degrades significantly: bytes/token increases because the TinyStories tokenizer lacks merges for web-specific artifacts (punctuation runs, markup, rare words). Qualitatively, text is split into many smaller byte-level tokens, leading to longer token sequences.
 
+(c) Estimate the throughput of your tokenizer (e.g., in bytes/second). How long would it take to tokenize the Pile dataset (825GB of text)?
+Ans:
 
-### Problem
+(d) Using your TinyStories and OpenWebText tokenizers, encode the respective training and development datasets into a sequence of integer token IDs. We’ll use this later to train our language model. We recommend serializing the token IDs as a NumPy array of datatype uint16. Why is uint16 an appropriate choice?
+Ans: uint16 can represent up to 65,536 token IDs, which safely covers vocab sizes like 10K–32K. It halves memory usage compared to int32, improving storage efficiency and cache performance without loss of information.

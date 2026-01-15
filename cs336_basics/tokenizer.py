@@ -1,6 +1,6 @@
 import regex as re
 from typing import Iterable, Iterator
-
+import random
 from .common import read_vocab_from_file, read_merges_from_file
 from .configs import config
 
@@ -100,7 +100,7 @@ class Tokenizer:
         else:
             
             parts = re.split(self.special_tokens_pattern, text)
-        print(f"parts: {parts}")
+        # print(f"parts: {parts}")
         
         for part in parts:
             if not part:
@@ -144,14 +144,32 @@ class Tokenizer:
             for id in self.encode(remaining_text):
                 yield id
     
+
     def decode(
         self, 
         ids: list[int]
     ) -> str:
         byte_seq = b"".join(self.vocab[i] for i in ids)
         return byte_seq.decode("utf-8", errors="replace")
-    
-    
+
+
+def get_compression_ratio(string: str, indices: list[int]) -> float:
+    """Given `string` that has been tokenized into `indices`, ."""
+    num_bytes = len(bytes(string, encoding="utf-8"))  # @inspect num_bytes
+    num_tokens = len(indices)                       # @inspect num_tokens
+    return num_bytes / num_tokens 
+
+
+def sample_documents(path: str, n: int) -> list[str]:
+    """
+    Sample `n` documents separated by <|endoftext|> from a dataset file.
+    """
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    docs = text.split("<|endoftext|>")
+    return random.sample([d.strip() for d in docs if d.strip()], n)
+
+   
 def test_1():
     vocab = {0: b' ', 1: b'a', 2: b'c', 3: b'e', 4: b'h', 5: b't', 6: b'th', 7: b' c', 8: b' a', 9: b'the', 10: b' at'}
     merges = [(b't', b'h'), (b' ', b'c'), (b' ', b'a'), (b'th', b'e'), (b' a', b't')]
@@ -194,13 +212,61 @@ def test_3():
     ids = tokenizer.encode(text)    
     print("ids:", ids)
     print("decoded:", tokenizer.decode(ids))
+
+
+def test_4():
+    def evaluate_tokenizer(tokenizer, docs: list[str], name: str):
+        ratios = []
+        for doc in docs:
+            ids = tokenizer.encode(doc)
+            ratio = get_compression_ratio(doc, ids)
+            ratios.append(ratio)
+
+        avg_ratio = sum(ratios) / len(ratios)
+        print(f"{name} average compression: {avg_ratio:.2f} bytes/token")
+        return ratios
+
+    # TinyStories tokenizer (10K)
+    ts_tokenizer = Tokenizer.from_files(
+        vocab_filepath="cs336_basics/data/TinyStoriesV2-GPT4-train_vocab.json",
+        merges_filepath="cs336_basics/data/TinyStoriesV2-GPT4-train_merges.txt",
+        special_tokens=["<|endoftext|>"]
+    )
+
+    # OpenWebText tokenizer (32K)
+    # owt_tokenizer = Tokenizer.from_files(
+    #     vocab_filepath="cs336_basics/data/owt_train_vocab.json",
+    #     merges_filepath="cs336_basics/data/owt_train_merges.txt",
+    #     special_tokens=["<|endoftext|>"]
+    # )
     
+    random.seed(42)
+    
+    # sample documents
+    tiny_docs = sample_documents(
+        "cs336_basics/data/TinyStoriesV2-GPT4-valid.txt", 10
+    )
+    # owt_docs = sample_documents(
+    #     "cs336_basics/data/owt_valid.txt", 10
+    # )
+    
+    # print("=== TinyStories docs ===")
+    evaluate_tokenizer(ts_tokenizer, tiny_docs, "TinyStories tokenizer")
+    # evaluate_tokenizer(owt_tokenizer, tiny_docs, "OpenWebText tokenizer")
+
+    # print("\n=== OpenWebText docs ===")
+    # evaluate_tokenizer(ts_tokenizer, owt_docs, "TinyStories tokenizer")
+    # evaluate_tokenizer(owt_tokenizer, owt_docs, "OpenWebText tokenizer")
+
     
 if __name__ == "__main__":
-    test_1()
+    # test_1()
     
-    print(f"-"*10)
-    test_2()
+    # print(f"-"*10)
+    # test_2()
     
-    print(f"-"*10)
-    test_3()
+    # print(f"-"*10)
+    # test_3()
+    
+    # print(f"-"*10)
+    test_4()
