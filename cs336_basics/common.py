@@ -1,23 +1,29 @@
 from tests.common import gpt2_bytes_to_unicode
+import json
 
-def write_vocab_to_file(vocab, file_path):
-    gpt2_byte_decoder = {k: v for k, v in gpt2_bytes_to_unicode().items()}
+def write_vocab_to_file(vocab: dict[int, bytes], file_path: str):
+    gpt2_byte_decoder = gpt2_bytes_to_unicode()
+
+    token_to_id = {}
+    for idx, byte_seq in vocab.items():
+        token_str = "".join(gpt2_byte_decoder[b] for b in byte_seq)
+        token_to_id[token_str] = idx
+
     with open(file_path, "w", encoding="utf-8") as f:
-        for k, v in vocab.items():
-            f.write(str(k) + " " + "".join([gpt2_byte_decoder[token] for token in v]))
-            f.write("\n")
+        json.dump(token_to_id, f, ensure_ascii=False, indent=2)
 
 
-def read_vocab_from_file(file_path):
+def read_vocab_from_file(file_path: str) -> dict[int, bytes]:
     gpt2_byte_encoder = {v: k for k, v in gpt2_bytes_to_unicode().items()}
+
     with open(file_path, encoding="utf-8") as f:
-        data = f.readlines()
-    vocab = {}
-    for line in data:
-        index, token = line.strip().split(" ", 1)
-        index = int(index)
-        token_in_bytes = bytes([gpt2_byte_encoder[ch] for ch in token])
-        vocab[index] = token_in_bytes
+        token_to_id = json.load(f)
+
+    vocab: dict[int, bytes] = {}
+    for token_str, idx in token_to_id.items():
+        token_bytes = bytes(gpt2_byte_encoder[ch] for ch in token_str)
+        vocab[idx] = token_bytes
+
     return vocab
 
 
