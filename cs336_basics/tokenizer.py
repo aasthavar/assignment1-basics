@@ -1,6 +1,7 @@
 import regex as re
 from typing import Iterable, Iterator
 import random
+import time
 from .common import read_vocab_from_file, read_merges_from_file
 from .configs import config
 
@@ -160,6 +161,14 @@ def get_compression_ratio(string: str, indices: list[int]) -> float:
     return num_bytes / num_tokens 
 
 
+def estimate_compression_ratio_and_throughput(tokenizer: Tokenizer, text: Iterable[str]=None):
+    start = time.time()
+    encoded = [tokenizer.encode(t) for t in text]
+    end = time.time()
+    encoded_length = sum([len(e) for e in encoded])
+    bytes_length = sum([len(t.encode('utf-8')) for t in text])
+    return bytes_length / encoded_length, bytes_length / (end - start)
+
 def sample_documents(path: str, n: int) -> list[str]:
     """
     Sample `n` documents separated by <|endoftext|> from a dataset file.
@@ -258,6 +267,18 @@ def test_4():
     # evaluate_tokenizer(ts_tokenizer, owt_docs, "TinyStories tokenizer")
     # evaluate_tokenizer(owt_tokenizer, owt_docs, "OpenWebText tokenizer")
 
+def test_5():
+    ts_tokenizer = Tokenizer.from_files(
+        vocab_filepath="cs336_basics/data/TinyStoriesV2-GPT4-train_vocab.json",
+        merges_filepath="cs336_basics/data/TinyStoriesV2-GPT4-train_merges.txt",
+        special_tokens=["<|endoftext|>"]
+    )
+    tiny_docs = sample_documents(
+        "cs336_basics/data/TinyStoriesV2-GPT4-valid.txt", 10
+    )
+    ts_ratio, ts_throughput = estimate_compression_ratio_and_throughput(ts_tokenizer, tiny_docs)
+    print(f"compression ratio: {ts_ratio}")
+    print(f"throughput: {ts_throughput} bytes/sec")
     
 if __name__ == "__main__":
     # test_1()
@@ -269,4 +290,5 @@ if __name__ == "__main__":
     # test_3()
     
     # print(f"-"*10)
-    test_4()
+    # test_4()
+    test_5()
