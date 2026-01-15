@@ -8,10 +8,15 @@ import multiprocessing as mp
 from .pretokenization_example import find_chunk_boundaries
 from .common import (
     write_vocab_to_file, 
-    write_merges_to_file
+    write_merges_to_file,
+    read_merges_from_file,
+    read_vocab_from_file
 )
 from tqdm import tqdm
 import json
+import psutil, os
+
+from tests.common import FIXTURES_PATH
 
 config = config["tokenizer"]
 config["PAT"] = re.compile(config["PAT"])
@@ -25,6 +30,17 @@ def timer(name: str, enabled: bool):
     yield
     end = time.perf_counter()
     print(f"[TIMER] {name}: {end - start:.4f}s")
+
+@contextmanager
+def rss_timer(name: str, enabled: bool):
+    if not enabled:
+        yield
+        return
+    process = psutil.Process(os.getpid())
+    before = process.memory_info().rss
+    yield
+    after = process.memory_info().rss
+    print(f"[RSS] {name}: Δ={(after-before)/1e6:.2f}MB")
 
 
 def apply_bpe_merge(
@@ -237,7 +253,7 @@ def train_bpe(
     # ------------------------------------------------------------
     # step 2: pre-tokenize
     # ------------------------------------------------------------
-    with timer("pre-tokenization", profile):
+    with timer("pre-tokenization", profile), rss_timer("pre-tokenization", profile):
         num_processes = mp.cpu_count()
         # print(f"num_processes for parallelizing pretokenization: {num_processes}")
         with open(input_path, "rb") as f:
@@ -261,9 +277,9 @@ def train_bpe(
     # ------------------------------------------------------------
     # step 3: compute merges
     # ------------------------------------------------------------
-    with timer("compute merges (total)", profile):
+    with timer("compute merges (total)", profile), rss_timer("compute merges (total)", profile):
         
-        with timer("compute merges: calc counts", profile):
+        with timer("compute merges: calc counts", profile), rss_timer("compute merges: calc counts", profile):
             # count byte-pair frequencies
             bytes_pair_counts = get_bytes_pair_counts(freq_table) # (bytes, bytes) → count
             # find all sequences which contain byte_pair and push it to dict
@@ -294,8 +310,29 @@ def train_bpe(
     
     return vocab, merges
 
+def test_read_write_vocab_merges():
+    input_path = FIXTURES_PATH / "corpus.en"
+    vocab, merges = train_bpe(
+        input_path=input_path,
+        vocab_size=500,
+        special_tokens=["<|endoftext|>"],
+    )
+    
+    # Write vocab and merges to files
+    write_vocab_to_file(vocab, "vocab.json")
+    write_merges_to_file(merges, "merges.txt")
+    
+    # Read back from files
+    vocab2 = read_vocab_from_file("vocab.json")
+    merges2 = read_merges_from_file("merges.txt")
+    
+    assert vocab == vocab2
+    assert merges == merges2
         
 if __name__ == "__main__":
+    
+    # test_read_write_vocab_merges()
+    
     # NOTE: For train_bpe_tinystories, train_bpe_expts_owt: just change the configs.py
     filename_with_ext = config["input_path"].split("/")[-1]
     print(f"config: {json.dumps(config, indent=2, default=str)}")
@@ -312,7 +349,7 @@ if __name__ == "__main__":
     print("\n-------- artifacts --------")
     filename = filename_with_ext.split(".")[0]
     
-    vocab_file_path = f"{config['save_path']}/{filename}_vocab.txt"
+    vocab_file_path = f"{config['save_path']}/{filename}_vocab.json"
     print(f"vocab file saved as: {vocab_file_path}")
     write_vocab_to_file(vocab, vocab_file_path)
     
