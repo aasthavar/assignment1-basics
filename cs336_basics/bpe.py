@@ -1,5 +1,6 @@
 # optimization of code inspiration from here: https://github.com/thtfive/cs336-assignment1-basics/blob/thtfive/basics/cs336_basics/train_bpe.py#L177
 
+from re import S
 import regex as re
 from .configs import config
 import time
@@ -14,12 +15,14 @@ from .common import (
 )
 from tqdm import tqdm
 import json
-import psutil, os
+import psutil
+import os
 
 from tests.common import FIXTURES_PATH
 
 config = config["tokenizer"]
 config["PAT"] = re.compile(config["PAT"])
+
 
 @contextmanager
 def timer(name: str, enabled: bool):
@@ -30,6 +33,7 @@ def timer(name: str, enabled: bool):
     yield
     end = time.perf_counter()
     print(f"[TIMER] {name}: {end - start:.4f}s")
+
 
 @contextmanager
 def rss_timer(name: str, enabled: bool):
@@ -46,8 +50,8 @@ def rss_timer(name: str, enabled: bool):
 def apply_bpe_merge(
     freq_table: dict[tuple[bytes, ...], int],
     max_pair: tuple[bytes, bytes],
-    bytes_pair_counts: dict[tuple[bytes, bytes], int],
-    bytes_pair_to_tokens: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]],
+    pair_counts: dict[tuple[bytes, bytes], int],
+    pair_to_sequences: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]],
 ) -> None:
     """
     Apply one BPE merge step for `max_pair`.
@@ -64,7 +68,7 @@ def apply_bpe_merge(
         - Rebuild a new freq_table from scratch
 
     Version 1 (localized update):
-        - Maintain bytes_pair_to_tokens
+        - Maintain pair_to_sequences
         - Only touch token sequences known to contain `max_pair`
         - Still returned a new freq_table
 
@@ -72,9 +76,9 @@ def apply_bpe_merge(
         - Mutate freq_table in-place
         - Incrementally update:
             * freq_table
-            * bytes_pair_counts
-            * bytes_pair_to_tokens
-        - No global recomputation of bytes_pair_counts, bytes_pair_to_tokens
+            * pair_counts
+            * pair_to_sequences
+        - No global recomputation of pair_counts, pair_to_sequences
         - No return value
 
     The current implementation corresponds to Version 2.
@@ -84,7 +88,7 @@ def apply_bpe_merge(
     a, b = max_pair
     merged = a + b
 
-    affected_sequences = bytes_pair_to_tokens[max_pair]
+    affected_sequences = pair_to_sequences[max_pair]
     if not affected_sequences:
         return
 
@@ -111,85 +115,83 @@ def apply_bpe_merge(
         for i in range(len(seq) - 1):
             pair = (seq[i], seq[i + 1])
 
-            bytes_pair_counts[pair] -= count
-            if bytes_pair_counts[pair] == 0:
-                del bytes_pair_counts[pair]
+            pair_counts[pair] -= count
+            if pair_counts[pair] == 0:
+                del pair_counts[pair]
 
-            if pair in bytes_pair_to_tokens:
-                bytes_pair_to_tokens[pair].discard(seq)
-                if not bytes_pair_to_tokens[pair]:
-                    del bytes_pair_to_tokens[pair]
+            if pair in pair_to_sequences:
+                pair_to_sequences[pair].discard(seq)
+                if not pair_to_sequences[pair]:
+                    del pair_to_sequences[pair]
 
         # ---- add new pair contributions ----
         for i in range(len(new_seq) - 1):
             pair = (new_seq[i], new_seq[i + 1])
-            bytes_pair_counts[pair] = bytes_pair_counts.get(pair, 0) + count
-            bytes_pair_to_tokens.setdefault(pair, set()).add(new_seq)
+            pair_counts[pair] = pair_counts.get(pair, 0) + count
+            pair_to_sequences.setdefault(pair, set()).add(new_seq)
 
         # ---- update freq_table ----
         del freq_table[seq]
         freq_table[new_seq] = freq_table.get(new_seq, 0) + count
 
     # this pair is fully merged and should never appear again
-    bytes_pair_counts.pop(max_pair, None)
-    bytes_pair_to_tokens.pop(max_pair, None)
+    pair_counts.pop(max_pair, None)
+    pair_to_sequences.pop(max_pair, None)
 
 
-def get_max_bytes_pair(
-    bytes_pair_counts: dict[tuple[bytes, bytes], int]
+def get_max_pair(
+    pair_counts: dict[tuple[bytes, bytes], int]
 ) -> tuple[bytes, bytes]:
     """
-    returns pair with max count. If counts tie, pick lexicographically greatest pair.
+    returns a max occurring pair. when counts tie, pick lexicographically greater pair.
     """
     # tuple comparison: first by count, then by pair lexicographically
     return max(
-        bytes_pair_counts.items(),
+        pair_counts.items(),
         key=lambda item: (item[1], item[0])
     )[0]
 
 
-def build_bytes_pair_to_tokens(
+def build_pair_to_sequences(
     freq_table: dict[tuple[bytes, ...], int],
-    bytes_pair_counts: dict[tuple[bytes, bytes], int],
+    pair_counts: dict[tuple[bytes, bytes], int],
     vocab_size: int
 ) -> dict[tuple[bytes, bytes], set[tuple[bytes, ...]]]:
     """
-    build a mapping from a byte pair to the set of token sequences (tuple[bytes]) 
-    in which that byte pair occurs.
-    
-    only the top `vocab_size` byte pairs (by frequency, with lexicographic 
-    tie-breaking) are indexed, since only those pairs are candidates for merging.
+    build a mapping from a byte-pair to the set of bytes-sequences (tuple[bytes]) in which that byte pair occurs.
+    only the top `vocab_size` byte pairs (by frequency, with lexicographic tie-breaking) are indexed, 
+    since only those pairs are candidates for merging.
     """
-    bytes_pair_to_tokens: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]] = {}
+    pair_to_sequences: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]] = {}
     # sort pairs by (count, pair) descending
-    sorted_bytes_pair_counts = sorted(
-        bytes_pair_counts.items(),
+    sorted_pair_counts = sorted(
+        pair_counts.items(),
         key=lambda item: (item[1], item[0]),
         reverse=True,
     )
-    for (bytes_pair, _) in sorted_bytes_pair_counts[:vocab_size]:
-        tok_seqs_with_bytes_pair = set()
-        for token_seq in freq_table.keys():
-            # check whether this token sequence contains the bytes_pair
-            for i in range(len(token_seq) - 1):
-                if (token_seq[i], token_seq[i + 1]) == bytes_pair:
-                    tok_seqs_with_bytes_pair.add(token_seq)
+    for (pair, _) in sorted_pair_counts[:vocab_size]:
+        seqs_with_pair = set()
+        for seq in freq_table.keys():
+            # check whether this bytes-sequence contains the bytes-pair
+            for i in range(len(seq) - 1):
+                if (seq[i], seq[i + 1]) == pair:
+                    seqs_with_pair.add(seq)
                     break
-        bytes_pair_to_tokens[bytes_pair] = tok_seqs_with_bytes_pair
-    return bytes_pair_to_tokens
+        pair_to_sequences[pair] = seqs_with_pair
+    return pair_to_sequences
 
 
-def get_bytes_pair_counts(
+def get_pair_counts(
     freq_table: dict[tuple[bytes], int]
 ) -> dict[tuple[bytes, bytes], int]:
     """build a dictionary of byte-pair frequencies"""
-    bytes_pair_counts: dict[tuple[bytes, bytes], int] = {}
-    for key, value in freq_table.items():
-        key_len = len(key)
-        for i in range(key_len-1):
-            pair = (key[i], key[i+1])
-            bytes_pair_counts[pair] = bytes_pair_counts.get(pair, 0) + value
-    return bytes_pair_counts
+    pair_counts: dict[tuple[bytes, bytes], int] = {}
+    for seq, count in freq_table.items():
+        seq_len = len(seq)
+        for i in range(seq_len-1):
+            pair = (seq[i], seq[i+1])
+            pair_counts[pair] = pair_counts.get(pair, 0) + count
+    return pair_counts
 
 
 def pretokenize_chunk(params) -> dict[tuple[bytes, ...], int]:
@@ -197,25 +199,34 @@ def pretokenize_chunk(params) -> dict[tuple[bytes, ...], int]:
     function does the following:
     - reads a chunk of the file
     - removes special tokens
-    - applies pre-tokenization regex
-    - converts text -> byte-level token seqences
-    - builds and returns a local frequency table
+    - applies pre-tokenization regex -> outputs list of words
+    - converts word -> sequence of bytes
+    - builds and returns a local frequency table of those byte-sequences
     """
     start, end = params["start"], params["end"]
-    freq_table: dict[tuple[bytes], int] = {} # token_sequence → count
+    freq_table: dict[tuple[bytes], int] = {} # byte_sequence → count
     with open(params["file_name"], "rb") as f:
         f.seek(start)
-        text = f.read(end-start).decode("utf-8", errors="ignore")
-        escaped = [re.escape(token) for token in params["special_tokens"]]
-        documents = re.split("|".join(escaped), text)
-        for doc in documents:
-            words = config["PAT"].findall(doc)
+        chunk_text = f.read(end-start).decode("utf-8", errors="ignore")
+        pattern = "|".join([re.escape(token) for token in params["special_tokens"]])
+        sub_chunks = re.split(pattern=pattern, string=chunk_text)
+        for sub_chunk in sub_chunks:
+            words = config["PAT"].findall(sub_chunk)
             for word in words:
                 key = tuple([bytes([x]) for x in word.encode("utf-8")])
                 freq_table[key] = freq_table.get(key, 0) + 1
     return freq_table
 
-
+# TODO:
+# qn: can this be parallelized? systems: what happens when freq_tables is so huge it doesn't fit in the memory
+# - This merge is associative and can be parallelized via tree reduction.
+# - However, materializing full freq_tables may exceed memory.
+# - Consider:
+#   (1) streaming merges,
+#   (2) disk-backed partial aggregation,
+#   (3) or avoiding full freq_table construction by maintaining pair counts incrementally.
+# Long-term fix is to avoid building full freq_table and
+# maintain byte-pair counts incrementally instead.
 def merge_freq_tables(
     freq_tables:list[dict[tuple[bytes, ...], int]]
 ) -> dict[tuple[bytes, ...], int]:
@@ -227,6 +238,35 @@ def merge_freq_tables(
         for key, count in table.items():
             merged_freq_table[key] = merged_freq_table.get(key, 0) + count
     return merged_freq_table
+
+# def merge_two_tables(a, b):
+#     out = a.copy()
+#     for key, count in b.items():
+#         out[key] = out.get(key, 0) + count
+#     return out
+
+
+# def merge_freq_tables_parallel(freq_tables):
+#     tables = freq_tables
+#     num_processes = mp.cpu_count()
+
+#     while len(tables) > 1:
+#         pairs = []
+#         for i in range(0, len(tables), 2):
+#             if i + 1 < len(tables):
+#                 pairs.append((tables[i], tables[i + 1]))
+#             else:
+#                 pairs.append((tables[i], None))
+
+#         with mp.Pool(num_processes) as pool:
+#             merged = pool.starmap(
+#                 lambda a, b: merge_two_tables(a, b) if b else a,
+#                 pairs
+#             )
+
+#         tables = merged  # shrink by ~2× each round
+
+#     return tables[0]
 
 
 def train_bpe(
@@ -281,9 +321,14 @@ def train_bpe(
         
         with timer("compute merges: calc counts", profile), rss_timer("compute merges: calc counts", profile):
             # count byte-pair frequencies
-            bytes_pair_counts = get_bytes_pair_counts(freq_table) # (bytes, bytes) → count
+            pair_counts = get_pair_counts(freq_table) # (bytes, bytes) → count
+            
             # find all sequences which contain byte_pair and push it to dict
-            bytes_pair_to_tokens = build_bytes_pair_to_tokens(freq_table, bytes_pair_counts, vocab_size) # (bytes, bytes) → set[token_sequence] 
+            pair_to_sequences = build_pair_to_sequences(
+                freq_table, 
+                pair_counts, 
+                vocab_size
+            ) # (bytes, bytes) → set[byte sequences] 
         
         iterator = range(vid, vocab_size)
         if profile: # using this time slightly increased
@@ -296,13 +341,13 @@ def train_bpe(
         merges: list[tuple(bytes, bytes)] = []
         
         for _ in iterator: # while vid < vocab_size: # merge until we reach vocab_size
-            if not bytes_pair_counts: # no merge byte pairs to merge
+            if not pair_counts: # no merge byte pairs to merge
                 break
             # find the pair with max count
-            pair = get_max_bytes_pair(bytes_pair_counts)
+            pair = get_max_pair(pair_counts)
 
             # update freq_table (by merging the bytes pair), vocab, merges, 
-            apply_bpe_merge(freq_table, pair, bytes_pair_counts, bytes_pair_to_tokens)
+            apply_bpe_merge(freq_table, pair, pair_counts, pair_to_sequences)
             
             merges.append(pair)
             vocab[vid] = pair[0]+pair[1]
