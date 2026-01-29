@@ -45,19 +45,110 @@
 
 
 # ---------------------------- #
-# with open("cs336_basics/data/TinyStoriesV2-GPT4-train_vocab.txt") as f:
-with open("cs336_basics/data/owt_valid_vocab.txt") as f:
-    text = f.read()
-    lines = text.split("\n")
-    tokens = []
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        token = line.split(" ")[1]
-        tokens.append(token)
+# # with open("cs336_basics/data/TinyStoriesV2-GPT4-train_vocab.txt") as f:
+# with open("cs336_basics/data/owt_valid_vocab.txt") as f:
+#     text = f.read()
+#     lines = text.split("\n")
+#     tokens = []
+#     for line in lines:
+#         line = line.strip()
+#         if not line:
+#             continue
+#         token = line.split(" ")[1]
+#         tokens.append(token)
 
-    print(max(tokens, key=lambda item: len(item)))
+#     print(max(tokens, key=lambda item: len(item)))
+
+# ---------------------------- #
+# import regex as re
+# special_tokens = ["<|endooftext|>", "<|startoftext|>", "<|toolchoice|>", "aastha!<*&$@"]
+# text = """
+# <|startoftext|>
+# I am fond of oranges.
+# Would love to grow a forest of all kinds of trees.
+# One day, will build a home near ocean and mountains.
+# <|endoftext|>
+# """
+
+# escaped = [re.escape(token) for token in special_tokens]
+# print(escaped)
+
+
+# ---------------------------- #
+# word = "~aastha~"
+# word_encoded = word.encode("utf-8")
+# # word_encoded = word.encode("utf-32")
+# print(f"len: {len(word_encoded)}")
+# print(f"type: {type(word_encoded)}")
+# print(f"word_encoded: {word_encoded}")
+
+# for b in word_encoded:
+#     print(b, bytes([b]))
+
+
+# ---------------------------- #
+# import torch
+
+# x = torch.ones(5)
+# y = torch.zeros(3)
+
+# w = torch.rand(5, 3, requires_grad=True)
+# b = torch.randn(3, requires_grad=True)
+
+# z = torch.matmul(x, w) + b
+
+# loss = torch.nn.functional.binary_cross_entropy_with_logits(z, y)
+# print(loss)
+
+
+# ---------------------------- #
+# import re
+
+# special_tokens = ["*", "!"]
+# special_tokens_sorted = sorted(special_tokens, key=len, reverse=True)
+# pat = "(" + "|".join(map(re.escape, special_tokens_sorted)) + ")" # ['ab', '*', 'c', '*', 'def', '!', '']
+# # pat = "|".join(map(re.escape, special_tokens_sorted)) #  ['ab', 'c', 'def', '']
+
+# text = "ab*c*def!"
+
+# parts = re.split(pat, text)
+
+# print(parts)
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
+
+# ---------------------------- #
+
+
 
 # ---------------------------- #
 

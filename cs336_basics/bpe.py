@@ -23,7 +23,6 @@ from tests.common import FIXTURES_PATH
 config = config["tokenizer"]
 config["PAT"] = re.compile(config["PAT"])
 
-
 @contextmanager
 def timer(name: str, enabled: bool):
     if not enabled:
@@ -63,13 +62,13 @@ def apply_bpe_merge(
     Optimization history (conceptual):
 
     Version 0 (naive, O(N)):
-        - Loop over *all* token sequences
+        - Loop over *all* bytes sequences
         - Merge `max_pair` wherever it appears
         - Rebuild a new freq_table from scratch
 
     Version 1 (localized update):
         - Maintain pair_to_sequences
-        - Only touch token sequences known to contain `max_pair`
+        - Only touch bytes sequences known to contain `max_pair`
         - Still returned a new freq_table
 
     Version 2 (incremental, current):
@@ -208,8 +207,7 @@ def pretokenize_chunk(params) -> dict[tuple[bytes, ...], int]:
     with open(params["file_name"], "rb") as f:
         f.seek(start)
         chunk_text = f.read(end-start).decode("utf-8", errors="ignore")
-        pattern = "|".join([re.escape(token) for token in params["special_tokens"]])
-        sub_chunks = re.split(pattern=pattern, string=chunk_text)
+        sub_chunks = re.split(pattern=params["special_tokens_pattern"], string=chunk_text)
         for sub_chunk in sub_chunks:
             words = config["PAT"].findall(sub_chunk)
             for word in words:
@@ -217,7 +215,7 @@ def pretokenize_chunk(params) -> dict[tuple[bytes, ...], int]:
                 freq_table[key] = freq_table.get(key, 0) + 1
     return freq_table
 
-# TODO:
+# NOTE:
 # qn: can this be parallelized? systems: what happens when freq_tables is so huge it doesn't fit in the memory
 # - This merge is associative and can be parallelized via tree reduction.
 # - However, materializing full freq_tables may exceed memory.
@@ -239,7 +237,7 @@ def merge_freq_tables(
             merged_freq_table[key] = merged_freq_table.get(key, 0) + count
     return merged_freq_table
 
-# def merge_two_tables(a, b):
+# def _merge_two_tables(a, b):
 #     out = a.copy()
 #     for key, count in b.items():
 #         out[key] = out.get(key, 0) + count
@@ -260,7 +258,7 @@ def merge_freq_tables(
 
 #         with mp.Pool(num_processes) as pool:
 #             merged = pool.starmap(
-#                 lambda a, b: merge_two_tables(a, b) if b else a,
+#                 lambda a, b: _merge_two_tables(a, b) if b else a,
 #                 pairs
 #             )
 
@@ -296,6 +294,8 @@ def train_bpe(
     with timer("pre-tokenization", profile), rss_timer("pre-tokenization", profile):
         num_processes = mp.cpu_count()
         # print(f"num_processes for parallelizing pretokenization: {num_processes}")
+        special_tokens_pattern = "|".join([re.escape(token) for token in special_tokens])
+        
         with open(input_path, "rb") as f:
             chunk_boundaries = find_chunk_boundaries(
                 file=f,
@@ -308,7 +308,7 @@ def train_bpe(
                     "file_name": input_path, 
                     "start": chunk_boundaries[i], 
                     "end": chunk_boundaries[i+1], 
-                    "special_tokens": special_tokens
+                    "special_tokens_pattern": special_tokens_pattern
                 } for i in range(len(chunk_boundaries)-1)
             ]
             freq_tables = pool.map(pretokenize_chunk, tasks)
@@ -355,6 +355,7 @@ def train_bpe(
     
     return vocab, merges
 
+
 def test_read_write_vocab_merges():
     input_path = FIXTURES_PATH / "corpus.en"
     vocab, merges = train_bpe(
@@ -373,6 +374,7 @@ def test_read_write_vocab_merges():
     
     assert vocab == vocab2
     assert merges == merges2
+ 
         
 if __name__ == "__main__":
     

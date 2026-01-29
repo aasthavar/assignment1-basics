@@ -154,20 +154,41 @@ class Tokenizer:
         return byte_seq.decode("utf-8", errors="replace")
 
 
-def get_compression_ratio(string: str, indices: list[int]) -> float:
-    """Given `string` that has been tokenized into `indices`, ."""
+def get_compression_ratio(
+    string: str, 
+    indices: list[int]
+) -> float:
+    """Given `string` that has been tokenized into `indices`."""
     num_bytes = len(bytes(string, encoding="utf-8"))  # @inspect num_bytes
     num_tokens = len(indices)                       # @inspect num_tokens
     return num_bytes / num_tokens 
 
 
-def estimate_compression_ratio_and_throughput(tokenizer: Tokenizer, text: Iterable[str]=None):
+def estimate_compression_ratio_and_throughput(
+    tokenizer: Tokenizer,
+    text: Iterable[str]=None
+) -> tuple[float, float]:
+    """ 
+    returns global compression ratio, throughput 
+    
+    notes:
+    - global compression ratio: bytes/token; on average, how many bytes does each token represents?)
+    - throughput: bytes/second; captures speed of tokenization; if I stream text into this tokenization, how fast can it keep up?
+    - takeaway:
+        - compression = how much you reduce text
+        - throughput = how fast you do it
+    """
     start = time.time()
     encoded = [tokenizer.encode(t) for t in text]
     end = time.time()
-    encoded_length = sum([len(e) for e in encoded])
-    bytes_length = sum([len(t.encode('utf-8')) for t in text])
-    return bytes_length / encoded_length, bytes_length / (end - start)
+
+    num_bytes = sum([len(bytes(t, encoding="utf-8")) for t in text])
+    num_tokens = sum([len(e) for e in encoded])
+
+    ratio = num_bytes / num_tokens
+    throughput =  num_bytes / (end - start)
+    
+    return ratio, throughput
 
 def sample_documents(path: str, n: int) -> list[str]:
     """
@@ -178,7 +199,58 @@ def sample_documents(path: str, n: int) -> list[str]:
     docs = text.split("<|endoftext|>")
     return random.sample([d.strip() for d in docs if d.strip()], n)
 
-   
+
+# def evaluate_tokenizer(tokenizer, docs: list[str], name: str):
+#     """ 
+#     Compute per-document compression ratios (bytes/token) for analysis.
+
+#     NOTE:
+#     This function intentionally computes the *average of per-document
+#     compression ratios*, i.e. it averages (bytes_i / tokens_i) over documents.
+#     While this can be useful for understanding variability across documents,
+#     it is *not* the correct metric for evaluating tokenizer efficiency in
+#     training or inference.
+
+#     For tokenizer quality and training cost, the correct metric is the
+#     *global compression ratio*:
+#         (sum of bytes across all documents) / (sum of tokens across all documents)
+
+#     This function is kept for learning and exploratory analysis only.
+#     """
+#     ratios = []
+#     for doc in docs:
+#         ids = tokenizer.encode(doc)
+#         ratio = get_compression_ratio(doc, ids)
+#         ratios.append(ratio)
+
+#     avg_ratio = sum(ratios) / len(ratios)
+#     print(f"{name} average per-document compression: {avg_ratio:.2f} bytes/token")
+#     return ratios
+
+
+def evaluate_tokenizer(tokenizer, docs: list[str], name: str):
+    """
+    Evaluate tokenizer using the *global compression ratio* (bytes/token).
+
+    This computes:
+        (total bytes across all documents) / (total tokens across all documents)
+
+    This is the correct metric for comparing tokenizers in terms of
+    training efficiency, throughput, and scaling behavior.
+    """
+    total_bytes = 0
+    total_tokens = 0
+
+    for doc in docs:
+        ids = tokenizer.encode(doc)
+        total_bytes += len(doc.encode("utf-8"))
+        total_tokens += len(ids)
+
+    compression_ratio = total_bytes / total_tokens
+    print(f"{name} global compression: {compression_ratio:.2f} bytes/token")
+
+    return compression_ratio
+
 def test_1():
     vocab = {0: b' ', 1: b'a', 2: b'c', 3: b'e', 4: b'h', 5: b't', 6: b'th', 7: b' c', 8: b' a', 9: b'the', 10: b' at'}
     merges = [(b't', b'h'), (b' ', b'c'), (b' ', b'a'), (b'th', b'e'), (b' a', b't')]
@@ -224,17 +296,6 @@ def test_3():
 
 
 def test_4():
-    def evaluate_tokenizer(tokenizer, docs: list[str], name: str):
-        ratios = []
-        for doc in docs:
-            ids = tokenizer.encode(doc)
-            ratio = get_compression_ratio(doc, ids)
-            ratios.append(ratio)
-
-        avg_ratio = sum(ratios) / len(ratios)
-        print(f"{name} average compression: {avg_ratio:.2f} bytes/token")
-        return ratios
-
     # TinyStories tokenizer (10K)
     ts_tokenizer = Tokenizer.from_files(
         vocab_filepath="cs336_basics/data/TinyStoriesV2-GPT4-train_vocab.json",
@@ -242,7 +303,7 @@ def test_4():
         special_tokens=["<|endoftext|>"]
     )
 
-    # OpenWebText tokenizer (32K)
+    # # OpenWebText tokenizer (32K)
     # owt_tokenizer = Tokenizer.from_files(
     #     vocab_filepath="cs336_basics/data/owt_train_vocab.json",
     #     merges_filepath="cs336_basics/data/owt_train_merges.txt",
@@ -290,5 +351,5 @@ if __name__ == "__main__":
     # test_3()
     
     # print(f"-"*10)
-    # test_4()
-    test_5()
+    test_4()
+    # test_5()
