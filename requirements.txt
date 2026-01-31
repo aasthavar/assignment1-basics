@@ -1,3 +1,4 @@
 torch
 fancy-einsum
 jaxtyping
+einops
