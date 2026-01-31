@@ -112,11 +112,37 @@
 # text = "ab*c*def!"
 
 # parts = re.split(pat, text)
-
 # print(parts)
+
+
 # ---------------------------- #
 
+# [bs, sl] -> embedding layer -> [bs, sl, d_model]
+# [bs, sl, d_in] -> linear layer -> [bs, sl, d_out]
 
+from ntpath import dirname
+import torch
+import torch.nn as nn
+import numpy as np
+from fancy_einsum import einsum
+
+din, dout = 2, 3
+
+weights1 = torch.empty((dout, din))
+nn.init.normal_(weights1, std=0.02, mean=0.0)
+print(f"normal:\n{weights1}")
+
+weights2 = torch.empty((dout, din))
+sigma = np.sqrt(2/(din+dout))
+nn.init.trunc_normal_(weights2, std=sigma, mean=0.0, a=-3*sigma, b=3*sigma)
+print(f"normal truncated:\n{weights2}")
+
+bs, sl = 1, 4
+x = torch.randn((bs, sl, din))
+print(f"x:\n{x}")
+
+y = einsum("bs sl din, dout din -> bs sl dout", x, weights2)
+print(f"y:\n{y}")
 
 # ---------------------------- #
 
