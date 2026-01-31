@@ -120,34 +120,54 @@
 # [bs, sl] -> embedding layer -> [bs, sl, d_model]
 # [bs, sl, d_in] -> linear layer -> [bs, sl, d_out]
 
-from ntpath import dirname
-import torch
-import torch.nn as nn
-import numpy as np
-from fancy_einsum import einsum
+# import torch
+# import torch.nn as nn
+# import numpy as np
+# from fancy_einsum import einsum
 
-din, dout = 2, 3
+# din, dout = 2, 3
 
-weights1 = torch.empty((dout, din))
-nn.init.normal_(weights1, std=0.02, mean=0.0)
-print(f"normal:\n{weights1}")
+# weights1 = torch.empty((dout, din))
+# nn.init.normal_(weights1, std=0.02, mean=0.0)
+# print(f"normal:\n{weights1}")
 
-weights2 = torch.empty((dout, din))
-sigma = np.sqrt(2/(din+dout))
-nn.init.trunc_normal_(weights2, std=sigma, mean=0.0, a=-3*sigma, b=3*sigma)
-print(f"normal truncated:\n{weights2}")
+# weights2 = torch.empty((dout, din))
+# sigma = np.sqrt(2/(din+dout))
+# nn.init.trunc_normal_(weights2, std=sigma, mean=0.0, a=-3*sigma, b=3*sigma)
+# print(f"normal truncated:\n{weights2}")
 
-bs, sl = 1, 4
-x = torch.randn((bs, sl, din))
-print(f"x:\n{x}")
+# bs, sl = 1, 4
+# x = torch.randn((bs, sl, din))
+# print(f"x:\n{x}")
 
-y = einsum("bs sl din, dout din -> bs sl dout", x, weights2)
-print(f"y:\n{y}")
+# y = einsum("bs sl din, dout din -> bs sl dout", x, weights2)
+# print(f"y:\n{y}")
 
 # ---------------------------- #
 
+import torch
+import numpy as np
 
+d_vocab, d_embed = 5, 3
 
+# embed = torch.randn((d_vocab, d_embed))
+# print(embed)
+
+embed = torch.tensor([[ 0.4838, -1.5843,  1.9253],
+        [-1.5891, -2.2003, -0.4024],
+        [ 1.0897, -0.9372, -1.5631],
+        [ 1.3100, -0.0825,  0.7125],
+        [-0.7580, -0.9341,  0.0832]])
+
+# a = np.arange(5)
+# print(a, a.shape)
+# b = embed[a]
+# print(b, b.shape)
+
+a = np.array([[1, 2], [2, 3]])
+print(a, a.shape)
+b = embed[a]
+print(b, b.shape)
 # ---------------------------- #
 
 
