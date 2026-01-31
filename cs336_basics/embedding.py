@@ -29,22 +29,22 @@ class Embedding(nn.Module):
             self.W_embed, mean=mu, std=sigma, a=-3*sigma, b=3*sigma
         )
     
-    # def forward(
-    #     self,
-    #     token_ids: torch.Tensor
-    # ) -> torch.Tensor:
-    #     """embedding lookup"""
-    #     return self.W_embed[token_ids]
-    
     def forward(
         self,
         token_ids: torch.Tensor
     ) -> torch.Tensor:
         """embedding lookup"""
-        # token_ids.shape = [batch_size, seq_len]
-        out = self.W_embed[:token_ids.size(1), :]
-        out = einops.repeat(out, "seq_len d_model -> batch_size seq_len d_model", batch_size=token_ids.size(0))
-        return out  # out.shape = [batch_szie, seq_len, d_model]
+        return self.W_embed[token_ids]
+    
+    # def forward(
+    #     self,
+    #     token_ids: torch.Tensor
+    # ) -> torch.Tensor:
+    #     """embedding lookup"""
+    #     # token_ids.shape = [batch_size, seq_len]
+    #     out = self.W_embed[:token_ids.size(1), :]
+    #     out = einops.repeat(out, "seq_len d_model -> batch_size seq_len d_model", batch_size=token_ids.size(0))
+    #     return out  # out.shape = [batch_szie, seq_len, d_model]
 
 if __name__ == "__main__":
     d_vocab, d_model = 512, 64
