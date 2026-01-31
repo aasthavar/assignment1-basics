@@ -1,8 +1,5 @@
 import torch
 import torch.nn as nn
-import numpy as np
-
-from fancy_einsum import einsum
 
 class RMSNorm(nn.Module):
     def __init__(self, d_model, eps=1e-5, device=None, dtype=None):
