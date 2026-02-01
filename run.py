@@ -229,21 +229,26 @@ import torch.nn as nn
 
 
 # ---------------------------- #
-x = np.array([[1, 2, 3],
-              [4, 5, 6],
-              [7, 8, 9]])
+# x = np.array([[1, 2, 3],
+#               [4, 5, 6],
+#               [7, 8, 9]])
 
-# Apply the slicing: select all rows, and every other element from each column
-x_even = x[..., 0::2]
-x_odd = x[..., 1::2]
+# # Apply the slicing: select all rows, and every other element from each column
+# x_even = x[..., 0::2]
+# x_odd = x[..., 1::2]
 
-print(x_even)
-print(x_odd)
+# print(x_even)
+# print(x_odd)
 
 
 
 # ---------------------------- #
+x = torch.randn(2, 3, 3)
+i = 1
+print(x)
 
+max_vals = x.max(dim=i, keepdim=True).values
+print(max_vals)
 
 
 # ---------------------------- #
