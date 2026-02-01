@@ -1,3 +1,6 @@
+import torch
+import numpy as np
+import torch.nn as nn
 
 # a = 'abc'
 # print(a.__repr__())
@@ -170,25 +173,72 @@
 # print(b, b.shape)
 # ---------------------------- #
 
-import torch.nn as nn
-import torch
+# import torch.nn as nn
+# import torch
 
-bs, sl, d_model = 2, 2, 3
-input = torch.randn((bs, sl, d_model))
+# bs, sl, d_model = 4, 3, 5
+# input = torch.randn((bs, sl, d_model))
 
-rms_norm = nn.RMSNorm(d_model)
-layer_norm = nn.LayerNorm(d_model)
+# # rms_norm = nn.RMSNorm(d_model)
+# # layer_norm = nn.LayerNorm(d_model)
 
-print(input)
-print(rms_norm(input))
-print(layer_norm(input))
+
+# print(input)
+# # print(rms_norm(input))
+# # print(layer_norm(input))
+
+# batch_norm = nn.BatchNorm1d(d_model)
+# x_reshaped = input.reshape(-1, d_model)
+# print(x_reshaped)
+# x_bn = batch_norm(x_reshaped)
+# print(x_bn.shape)
+# print(x_bn)
+
 
 
 # ---------------------------- #
+# d_k = 16
+# k = torch.arange(1, d_k/2+1, 1)
+# k = 2*k-2
+# print(k)
 
+# a = 2
+# b = 3
+# print(np.pow(a, b))
+
+# max_seq_len = 5
+# d_model = 16
+# pos = torch.arange(max_seq_len)
+# inv_freq = torch.arange(0, d_model, 2)
+
+# print(pos)
+# print(pos.shape)
+# print(pos[:, None])
+# print(pos[:, None].shape)
+# print()
+
+# print(inv_freq)
+# print(inv_freq.shape)
+# print(inv_freq[None, :])
+# print(inv_freq[None, :].shape)
+# print()
+
+# angles = pos[:, None] * inv_freq[None, :]
+# print(angles)
+# print(angles.shape)
 
 
 # ---------------------------- #
+x = np.array([[1, 2, 3],
+              [4, 5, 6],
+              [7, 8, 9]])
+
+# Apply the slicing: select all rows, and every other element from each column
+x_even = x[..., 0::2]
+x_odd = x[..., 1::2]
+
+print(x_even)
+print(x_odd)
 
 
 
