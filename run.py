@@ -145,31 +145,43 @@
 
 # ---------------------------- #
 
-import torch
-import numpy as np
+# import torch
+# import numpy as np
 
-d_vocab, d_embed = 5, 3
+# d_vocab, d_embed = 5, 3
 
-# embed = torch.randn((d_vocab, d_embed))
-# print(embed)
+# # embed = torch.randn((d_vocab, d_embed))
+# # print(embed)
 
-embed = torch.tensor([[ 0.4838, -1.5843,  1.9253],
-        [-1.5891, -2.2003, -0.4024],
-        [ 1.0897, -0.9372, -1.5631],
-        [ 1.3100, -0.0825,  0.7125],
-        [-0.7580, -0.9341,  0.0832]])
+# embed = torch.tensor([[ 0.4838, -1.5843,  1.9253],
+#         [-1.5891, -2.2003, -0.4024],
+#         [ 1.0897, -0.9372, -1.5631],
+#         [ 1.3100, -0.0825,  0.7125],
+#         [-0.7580, -0.9341,  0.0832]])
 
-# a = np.arange(5)
+# # a = np.arange(5)
+# # print(a, a.shape)
+# # b = embed[a]
+# # print(b, b.shape)
+
+# a = np.array([[1, 2], [2, 3]])
 # print(a, a.shape)
 # b = embed[a]
 # print(b, b.shape)
-
-a = np.array([[1, 2], [2, 3]])
-print(a, a.shape)
-b = embed[a]
-print(b, b.shape)
 # ---------------------------- #
 
+import torch.nn as nn
+import torch
+
+bs, sl, d_model = 2, 2, 3
+input = torch.randn((bs, sl, d_model))
+
+rms_norm = nn.RMSNorm(d_model)
+layer_norm = nn.LayerNorm(d_model)
+
+print(input)
+print(rms_norm(input))
+print(layer_norm(input))
 
 
 # ---------------------------- #

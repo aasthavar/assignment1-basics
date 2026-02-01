@@ -34,6 +34,7 @@ class Embedding(nn.Module):
         token_ids: torch.Tensor
     ) -> torch.Tensor:
         """embedding lookup"""
+        assert token_ids.dtype == torch.long
         return self.W_embed[token_ids]
     
     # def forward(
