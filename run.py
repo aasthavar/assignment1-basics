@@ -243,13 +243,19 @@ import torch.nn as nn
 
 
 # ---------------------------- #
-x = torch.randn(2, 3, 3)
+x = torch.randn(2, 3, 4)
 i = 1
 print(x)
 
-max_vals = x.max(dim=i, keepdim=True).values
-print(max_vals)
+print(x.max(dim=i).values.shape)
 
+max_vals = x.max(dim=i, keepdim=True).values
+print(max_vals.shape)
+
+exp_x = x.exp(dim=i, keepdim=True)
+print(exp_x.shape)
+
+sum_exp_x = exp_x.sum(dim=i)
 
 # ---------------------------- #
 
